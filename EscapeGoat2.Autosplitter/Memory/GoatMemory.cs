@@ -20,12 +20,29 @@ namespace LiveSplit.EscapeGoat2.Memory
         public Dictionary<string, StaticField> staticCache = new Dictionary<string, StaticField>();
         public Dictionary<string, ValuePointer> pointerCache = new Dictionary<string, ValuePointer>();
 
+        public StaticField GetGame() {
+            return GetCachedStaticField("MagicalTimeBean.Bastille.BastilleGame", "<Instance>k__BackingField");
+        }
+
         public StaticField GetCurrentScene() {
             return GetCachedStaticField("MagicalTimeBean.Bastille.Scenes.SceneManager", "_currentScene");
         }
 
         public StaticField GetActionStage() {
             return GetCachedStaticField("MagicalTimeBean.Bastille.Scenes.SceneManager", "<ActionSceneInstance>k__BackingField");
+        }
+
+        public long GetXnaGameFrames() {
+            var game = GetGame();
+            TimeSpan targetElapsedTime = new TimeSpan(game.Value.Value["targetElapsedTime"].Value.ForceCast("System.Int64").Read<Int64>());
+            TimeSpan accumulatedElapsedGameTime = new TimeSpan(game.Value.Value["accumulatedElapsedGameTime"].Value.ForceCast("System.Int64").Read<Int64>());
+            if (accumulatedElapsedGameTime >= targetElapsedTime) // currently updating
+                return 0;
+            TimeSpan game_totaltime = new TimeSpan(game.Value.Value["totalGameTime"].Value.ForceCast("System.Int64").Read<Int64>());
+            if (game_totaltime != new TimeSpan(game.Value.Value["totalGameTime"].Value.ForceCast("System.Int64").Read<Int64>())
+                || accumulatedElapsedGameTime != new TimeSpan(game.Value.Value["accumulatedElapsedGameTime"].Value.ForceCast("System.Int64").Read<Int64>()))
+                return 0;
+            return (game_totaltime.Ticks + targetElapsedTime.Ticks / 2) / targetElapsedTime.Ticks;
         }
 
         public bool GetStartOfGame() {

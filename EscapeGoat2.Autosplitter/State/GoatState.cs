@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using LiveSplit.EscapeGoat2.Memory;
 using LiveSplit.EscapeGoat2.Debugging;
+using System.Threading;
 
 namespace LiveSplit.EscapeGoat2.State
 {
@@ -31,6 +32,8 @@ namespace LiveSplit.EscapeGoat2.State
         public WorldMap map;
         public GoatMemory goatMemory;
         public GoatTriggers goatTriggers;
+
+        public long XnaGameFrames;
 
         public bool isStarted = false;                                  // Set to True when New Game is selected.
         public DoorState doorEnteredState = DoorState.Clear;            // Set to Entering on entering a door, set Clear on entering a room
@@ -65,6 +68,8 @@ namespace LiveSplit.EscapeGoat2.State
         }
 
         public void Reset() {
+            this.XnaGameFrames = 0;
+
             this.isStarted = false;
             this.hasPositionChangedSinceExit = false;
 
@@ -102,6 +107,7 @@ namespace LiveSplit.EscapeGoat2.State
 
                 // If we're open, do all the magic
                 if (isOpen) Pulse();
+                else Thread.Sleep(250);
             } catch (Exception e) {
                 if (this.exceptionsCaught < 10 && this.totalExceptionsCaught < 30) {
                     this.exceptionsCaught++;
@@ -132,6 +138,14 @@ namespace LiveSplit.EscapeGoat2.State
 
         public void Pulse() {
             this.pulseCount++;
+
+            long newXnaGameFrames = 0;
+            while (newXnaGameFrames == 0 || newXnaGameFrames == XnaGameFrames) {
+                Thread.Sleep(1);
+                newXnaGameFrames = goatMemory.GetXnaGameFrames();
+            }
+
+            XnaGameFrames = newXnaGameFrames;
 
             // If we haven't detected the start of a new game, check the memory
             // for the event

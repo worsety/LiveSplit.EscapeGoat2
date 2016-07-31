@@ -15,7 +15,6 @@ namespace EscapeGoat2.Autosplitter
     class Program
     {
         public static GoatState goatState;
-        private const int TARGET_UPDATE_RATE = 1;
         private static int cTimeFixed = 0;
 
         static void Main(string[] args) {
@@ -37,11 +36,6 @@ namespace EscapeGoat2.Autosplitter
             var profiler = Stopwatch.StartNew();
             while (!hasExited) {
                 Update();
-
-                if (profiler.ElapsedMilliseconds >= TARGET_UPDATE_RATE)
-                    Debug.WriteLine("Update iteration took too long: " + profiler.ElapsedMilliseconds);
-
-                Thread.Sleep(Math.Max(TARGET_UPDATE_RATE - (int)profiler.ElapsedMilliseconds, 1));
                 profiler.Restart();
             }
         }
@@ -83,7 +77,7 @@ namespace EscapeGoat2.Autosplitter
         }
 
         static void goatState_OnIGTFixed(object sender, EventArgs e) {
-            if (cTimeFixed * TARGET_UPDATE_RATE > 50) {
+            if (cTimeFixed > 3) {
                 Console.WriteLine("IGT Fixed");
             } else {
                 cTimeFixed = cTimeFixed + 1;
