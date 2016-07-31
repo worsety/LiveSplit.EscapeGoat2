@@ -4,17 +4,22 @@ using System.Collections.Generic;
 
 namespace LiveSplit.EscapeGoat2.Debugging
 {
-    public class LogWriter
+    public static class LogWriter
     {
+        private static Object locker = new Object();
         public static void WriteLine(string format, params object[] arg) {
 #if DEBUG
-            string str = format;
-            if (arg.Length > 0)
-                str = String.Format(format, arg);
+            lock (locker) {
+                try {
+                    string str = format;
+                    if (arg.Length > 0)
+                        str = String.Format(format, arg);
 
-            StreamWriter wr = new StreamWriter("_goatauto.log", true);
-            wr.WriteLine("[" + DateTime.Now + "] " + str);
-            wr.Close();
+                    StreamWriter wr = new StreamWriter("_goatauto.log", true);
+                    wr.WriteLine("[" + DateTime.Now + "] " + str);
+                    wr.Close();
+                } catch (Exception) {}
+            }
 #endif
         }
     }
