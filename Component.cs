@@ -59,6 +59,13 @@ namespace LiveSplit.EscapeGoat2
                     }
                 }
             );
+            process.Exited += new EventHandler
+            (
+                delegate(object sender, EventArgs e) {
+                    MessageBox.Show(String.Format("EscapeGoat2.Autosplitter.exe exited at {0} with code {1}\nPlease reload the layout.", process.ExitTime, process.ExitCode),
+                        "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            );
 
             process.Start();
             process.BeginOutputReadLine();
