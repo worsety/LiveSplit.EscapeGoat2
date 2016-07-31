@@ -1,7 +1,8 @@
-/*.suo
-/bin
-/obj
-/*.pdb
-/*.un~
-/*.swp
-/*.swo
+*.suo
+*.csproj.user
+bin
+obj
+*.pdb
+*.un~
+*.swp
+*.swo
