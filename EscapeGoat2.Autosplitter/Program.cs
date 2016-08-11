@@ -79,11 +79,7 @@ namespace EscapeGoat2.Autosplitter
         }
 
         static void goatState_OnIGTFixed(object sender, EventArgs e) {
-            if (cTimeFixed > 3) {
-                Console.WriteLine("IGT Fixed");
-            } else {
-                cTimeFixed = cTimeFixed + 1;
-            }
+            Console.WriteLine("IGT Fixed");
         }
 
         static void goatState_OnIGTChanged(object sender, EventArgs e) {
