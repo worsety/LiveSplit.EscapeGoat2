@@ -16,7 +16,7 @@ namespace LiveSplit.EscapeGoat2.Debugging
                         str = String.Format(format, arg);
 
                     StreamWriter wr = new StreamWriter("_goatauto.log", true);
-                    wr.WriteLine("[" + DateTime.Now + "] " + str);
+                    wr.WriteLine("[{0:yyyy-MM-dd HH:mm:ss.fff}] {1}", DateTime.Now, str);
                     wr.Close();
                 } catch (Exception) {}
             }
