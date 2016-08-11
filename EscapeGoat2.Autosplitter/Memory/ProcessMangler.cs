@@ -20,6 +20,18 @@ namespace LiveSplit.EscapeGoat2.Memory
             DataTarget = DataTarget.AttachToProcess(processId, AttachTimeout, AttachMode);
             Runtime = DataTarget.ClrVersions.First().CreateRuntime();
             Heap = Runtime.GetHeap();
+
+            // latency's bad, let's populate the type cache
+            foreach (string type in new string[] {
+                "System.Int64",
+                "System.Object[]",
+                "System.Collections.Generic.List<T>",
+                "System.Collections.Generic.List`1",
+                "MagicalTimeBean.Bastille.BastilleGame",
+                "MagicalTimeBean.Bastille.Scenes.SceneManager",
+                "MagicalTimeBean.Bastille.LevelData.MapPosition",
+            })
+                GetTypeByName(type, false);
         }
 
         public IEnumerable<ClrRoot> StackLocals {
@@ -48,12 +60,15 @@ namespace LiveSplit.EscapeGoat2.Memory
             return AllValuesOfType(from tn in typeNames select GetTypeByName(tn));
         }
 
-        public ClrType GetTypeByName(string typename)
+        public ClrType GetTypeByName(string typename, bool log=true)
         {
             if (typeCache.ContainsKey(typename))
                 return typeCache[typename];
             ClrType ret = Heap.GetTypeByName(typename);
-            typeCache[typename] = ret;
+            if (ret != null)
+                typeCache[typename] = ret;
+            else if (log)
+                LogWriter.WriteLine("Type lookup failed: {0}", typename);
             return ret;
         }
 
