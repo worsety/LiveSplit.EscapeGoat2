@@ -197,7 +197,7 @@ namespace LiveSplit.EscapeGoat2.State
                     OnTimerUpdated(splittime, EventArgs.Empty);
 
                     int roomID = (int)goatMemory.GetRoomID();
-                    LogWriter.WriteLine("Room time: {0} (room {0})", newRoomTime, roomID);
+                    LogWriter.WriteLine("Room time: {0} (room {1})", newRoomTime, roomID);
                     goatTriggers.SplitOnEndRoom(this.map.GetRoom(roomID));
 
                     bool newDoor = (bool)HaveEnteredDoor();
@@ -208,13 +208,14 @@ namespace LiveSplit.EscapeGoat2.State
                     // glass fragment (shard) is collected, or a sheep orb is
                     // collected.
                     // ^ old logic, but log if none of those happened
+                    // This is triggering a lot, I think it's the double split protection in HaveEnteredDoor()
                     if (!(newDoor || newSheepOrb || newShard))
                     {
                         LogWriter.WriteLine("Room ended for unknown reason.");
                     }
                 } else if (!roomTimeRunning && newRoomTime != roomTime) {
                     roomTimeRunning = true;
-                    LogWriter.WriteLine("Room timer started {0} at {0}", newRoomTime, goatMemory.GetGameTime());
+                    LogWriter.WriteLine("Room timer started {0} at {1}", newRoomTime, goatMemory.GetGameTime());
                 } else if (roomTimeRunning && newRoomTime == roomTime && roomTime != TimeSpan.Zero)
                 {
                     // spammy log
