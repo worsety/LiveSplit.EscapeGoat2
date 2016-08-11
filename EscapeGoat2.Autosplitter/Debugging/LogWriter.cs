@@ -18,7 +18,8 @@ namespace LiveSplit.EscapeGoat2.Debugging
 
             if (isSlave)
             {
-                Console.WriteLine("Log {0}", str);
+                foreach (string line in str.Split('\n'))
+                    Console.WriteLine("Log {0}", line);
             }
             else {
                 StreamWriter wr = new StreamWriter("_goatauto.log", true);
