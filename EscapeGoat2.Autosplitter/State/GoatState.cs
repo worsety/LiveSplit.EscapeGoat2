@@ -21,8 +21,8 @@ namespace LiveSplit.EscapeGoat2.State
     public enum PlayerState
     {
         Alive,
-        Dead
-        // No cats, only goats.
+        Dead,
+        Invulnerable,
     }
 
     public class GoatState
@@ -51,6 +51,9 @@ namespace LiveSplit.EscapeGoat2.State
         public TimeSpan lastSeen = TimeSpan.Zero;                       // The last time the player was seen (in In-Game Time)
         private DateTime lastSaneTime = DateTime.Now;
 
+        public bool roomTimeRunning = false;
+        public TimeSpan roomTime = TimeSpan.Zero;
+
         public event EventHandler OnTimerFixed;                         // Fires whenever the IGT between updates has not changed
         public event EventHandler OnTimerChanged;                       // Fires whenever the IGT between updates has changed
         public event EventHandler OnTimerUpdated;                       // Fires every update after the IGT is updated.
@@ -76,6 +79,9 @@ namespace LiveSplit.EscapeGoat2.State
             this.lastRoomID = 0;
             this.collectedShards = 0;
             this.collectedSheepOrbs = 0;
+
+            this.roomTimeRunning = false;
+            this.roomTime = TimeSpan.Zero;
 
             this.levelState = LevelState.Outside;
             this.playerState = PlayerState.Dead;
@@ -177,17 +183,44 @@ namespace LiveSplit.EscapeGoat2.State
                 UpdatePlayerStatus();
                 UpdateLevelStatus();
 
-                bool newDoor      = (bool)HaveEnteredDoor();
-                bool newSheepOrb  = (bool)HaveCollectedNewSheepOrb();
-                bool newShard     = (bool)HaveCollectedNewShard();
+                TimeSpan newRoomTime = goatMemory.GetRoomTime();
+                bool isRoomTimeNowPaused = (bool)goatMemory.GetRoomTimerPaused();
+                if (roomTimeRunning && (isRoomTimeNowPaused || this.playerState == PlayerState.Invulnerable))
+                {
+                    roomTimeRunning = false;
 
-                // A room ends on one of three conditions, a door is entered, a
-                // glass fragment (shard) is collected, or a sheep orb is
-                // collected.
-                if (newDoor || newSheepOrb || newShard) {
+                    // if we exited by a door, the room time wasn't updated this frame so add one frame
+                    TimeSpan splittime = lastSeen + newRoomTime - roomTime + (isRoomTimeNowPaused ? goatMemory.GetTargetElapsedTime() : TimeSpan.Zero);
+                    if (Math.Abs((goatMemory.GetGameTime() - splittime).Ticks) >= TimeSpan.FromMilliseconds(1).Ticks)
+                        LogWriter.WriteLine("Split late by {0} frames", (double)((goatMemory.GetGameTime() - splittime).Ticks / goatMemory.GetTargetElapsedTime().Ticks));
+
+                    OnTimerUpdated(splittime, EventArgs.Empty);
+
                     int roomID = (int)goatMemory.GetRoomID();
+                    LogWriter.WriteLine("Room time: {0} (room {0})", newRoomTime, roomID);
                     goatTriggers.SplitOnEndRoom(this.map.GetRoom(roomID));
+
+                    bool newDoor = (bool)HaveEnteredDoor();
+                    bool newSheepOrb = (bool)HaveCollectedNewSheepOrb();
+                    bool newShard = (bool)HaveCollectedNewShard();
+
+                    // A room ends on one of three conditions, a door is entered, a
+                    // glass fragment (shard) is collected, or a sheep orb is
+                    // collected.
+                    // ^ old logic, but log if none of those happened
+                    if (!(newDoor || newSheepOrb || newShard))
+                    {
+                        LogWriter.WriteLine("Room ended for unknown reason.");
+                    }
+                } else if (!roomTimeRunning && newRoomTime != roomTime) {
+                    roomTimeRunning = true;
+                    LogWriter.WriteLine("Room timer started {0} at {0}", newRoomTime, goatMemory.GetGameTime());
+                } else if (roomTimeRunning && newRoomTime == roomTime && roomTime != TimeSpan.Zero)
+                {
+                    // spammy log
+                    //LogWriter.WriteLine("Room timer stopped at {0}, game paused?", roomTime);
                 }
+                roomTime = newRoomTime;
             }
         }
 
@@ -291,19 +324,24 @@ namespace LiveSplit.EscapeGoat2.State
         public void UpdatePlayerStatus() {
             // This checks when the Goat player object exists. It is set to True when entering the first room,
             // and is set to False when the player dies. It is set to True again once respawned.
-            bool? player = goatMemory.GetIsPlayerObject();
+            var player = goatMemory.GetPlayerObject();
             if (!player.HasValue) return;
 
             // If we are currently Alive, but there is no player object, transition to Dead
-            if (this.playerState == PlayerState.Alive && !player.Value) {
+            if (this.playerState != PlayerState.Dead && !player.HasValue) {
                 LogWriter.WriteLine("Player Object Destroyed in Room {1} (Last Exit {0}) (P:{2})", this.lastRoomID, (int)goatMemory.GetRoomID(), this.pulseCount);
                 this.playerState = PlayerState.Dead;
             }
 
             // If we are currently Dead, but there is a Player object, transition to Alive
-            else if (this.playerState == PlayerState.Dead && player.Value) {
+            else if (this.playerState != PlayerState.Alive && player.HasValue && !(bool)goatMemory.IsGoatInvuln()) {
                 LogWriter.WriteLine("Player Object Created in Room {1} (Last Exit {0}) (P:{2})", this.lastRoomID, (int)goatMemory.GetRoomID(), this.pulseCount);
                 this.playerState = PlayerState.Alive;
+            }
+
+            if (this.playerState != PlayerState.Invulnerable && (bool)goatMemory.IsGoatInvuln()) {
+                LogWriter.WriteLine("Player Object Invulnerable (collected something) in Room {1} (Last Exit {0}) (P:{2})", this.lastRoomID, (int)goatMemory.GetRoomID(), this.pulseCount);
+                this.playerState = PlayerState.Invulnerable;
             }
         }
 

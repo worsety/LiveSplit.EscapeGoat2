@@ -32,9 +32,15 @@ namespace LiveSplit.EscapeGoat2.Memory
             return GetCachedStaticField("MagicalTimeBean.Bastille.Scenes.SceneManager", "<ActionSceneInstance>k__BackingField");
         }
 
+        public TimeSpan GetTargetElapsedTime()
+        {
+            var game = GetGame();
+            return new TimeSpan(game.Value.Value["targetElapsedTime"].Value.ForceCast("System.Int64").Read<Int64>());
+        }
+
         public long GetXnaGameFrames() {
             var game = GetGame();
-            TimeSpan targetElapsedTime = new TimeSpan(game.Value.Value["targetElapsedTime"].Value.ForceCast("System.Int64").Read<Int64>());
+            TimeSpan targetElapsedTime = GetTargetElapsedTime();
             TimeSpan accumulatedElapsedGameTime = new TimeSpan(game.Value.Value["accumulatedElapsedGameTime"].Value.ForceCast("System.Int64").Read<Int64>());
             if (accumulatedElapsedGameTime >= targetElapsedTime) // currently updating
                 return 0;
@@ -61,6 +67,16 @@ namespace LiveSplit.EscapeGoat2.Memory
             return GetCachedValuePointer(action, "RoomInstance");
         }
 
+        public ValuePointer? GetPlayerObject()
+        {
+            // We determine if the player object is there or not by trying to cast the `_player`
+            // property in the `ActionStage` to a boolean. If there is a player object, this will
+            // return true, and false if not.
+            var action = GetActionStage();
+            if (!action.Value.HasValue) return null;
+            return GetCachedValuePointer(action, "_player");
+        }
+
         public int? GetRoomID() {
             // This tells us what room we are currently in by its ID. This is used mostly for debugging purposes
             // as it enables us to determine where we are. This is not strictly required.
@@ -69,21 +85,40 @@ namespace LiveSplit.EscapeGoat2.Memory
             return roomInstance.Value.GetFieldValue<Int32>("<RoomID>k__BackingField");
         }
 
+        public TimeSpan GetRoomTime()
+        {
+            try
+            {
+                var action = GetRoomInstance();
+                Int64 time = action.Value["<RoomElapsedTime>k__BackingField"].Value.ForceCast("System.Int64").Read<Int64>();
+                return new TimeSpan(time);
+            }
+            catch
+            {
+                return TimeSpan.Zero;
+            }
+        }
+
+        public bool? IsGoatInvuln()
+        {
+            var player = GetPlayerObject();
+            if (!player.HasValue) return null;
+            return player.Value.GetFieldValue<bool>("<Invulnerable>k__BackingField");
+        }
+
+        public bool? GetRoomTimerPaused()
+        {
+            var action = GetRoomInstance();
+            if (!action.HasValue) return null;
+            return action.Value.GetFieldValue<bool>("<StopCountingElapsedTime>k__BackingField");
+        }
+
         public bool? GetReplayRecordingPaused() {
             // This value tells us if we have paused replay recording for the current room,
             // this occurs if you enter a door exit.
             var action = GetActionStage();
             if (!action.Value.HasValue) return null;
             return action.Value.Value.GetFieldValue<bool>("_pauseReplayRecording");
-        }
-
-        public bool? GetIsPlayerObject() {
-            // We determine if the player object is there or not by trying to cast the `_player`
-            // property in the `ActionStage` to a boolean. If there is a player object, this will
-            // return true, and false if not.
-            var action = GetActionStage();
-            if (!action.Value.HasValue) return null;
-            return action.Value.Value.GetFieldValue<bool>("_player");
         }
 
         public MapPosition? GetCurrentPosition() {
