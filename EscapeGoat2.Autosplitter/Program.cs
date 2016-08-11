@@ -15,7 +15,7 @@ namespace EscapeGoat2.Autosplitter
     class Program
     {
         public static GoatState goatState;
-        private static int cTimeFixed = 0;
+        private static bool timeFixed = true;
 
         static void Main(string[] args) {
             if (args.Contains("-s"))
@@ -79,15 +79,18 @@ namespace EscapeGoat2.Autosplitter
         }
 
         static void goatState_OnIGTFixed(object sender, EventArgs e) {
+            if (timeFixed) return;
+            timeFixed = true;
             Console.WriteLine("IGT Fixed");
         }
 
         static void goatState_OnIGTChanged(object sender, EventArgs e) {
-            cTimeFixed = 0;
+            timeFixed = false;
         }
 
         static void goatState_OnIGTUpdated(object sender, EventArgs e) {
-            Console.WriteLine("IGT {0}", (TimeSpan?)sender);
+            if (!timeFixed)
+                Console.WriteLine("IGT {0}", (TimeSpan?)sender);
         }
 
         static public void goatState_UndoSplit() {
@@ -99,6 +102,7 @@ namespace EscapeGoat2.Autosplitter
         static public void goatState_Reset() {
             // Reset the autosplitter state whenever LiveSplit is reset
             goatState.Reset();
+            timeFixed = true;
         }
     }
 }

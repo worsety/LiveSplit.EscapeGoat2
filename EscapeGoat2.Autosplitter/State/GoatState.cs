@@ -259,13 +259,13 @@ namespace LiveSplit.EscapeGoat2.State
             this.lastSaneTime = DateTime.Now;
 
             // Call all the relevant IGT based events depending on the time delta since the last pulse.
+            if (now != this.lastSeen)
+                if (this.OnTimerChanged != null) this.OnTimerChanged(now, EventArgs.Empty);
+
             if (this.OnTimerUpdated != null) this.OnTimerUpdated(now, EventArgs.Empty);
 
-            if (now > this.lastSeen) {
-                if (this.OnTimerChanged != null) this.OnTimerChanged(now, EventArgs.Empty);
-            } else {
+            if (now == this.lastSeen)
                 if (this.OnTimerFixed != null) this.OnTimerFixed(now, EventArgs.Empty);
-            }
 
             this.lastSeen = now;
         }
