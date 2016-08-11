@@ -31,7 +31,7 @@ namespace LiveSplit.EscapeGoat2
             processStartInfo.RedirectStandardOutput = true;
             processStartInfo.RedirectStandardInput = true;
             processStartInfo.UseShellExecute = false;
-            processStartInfo.Arguments = "";
+            processStartInfo.Arguments = "-s";
             processStartInfo.FileName = "Components/EscapeGoat2.Autosplitter.exe";
 
             process = new Process();
@@ -55,6 +55,9 @@ namespace LiveSplit.EscapeGoat2
                             } else {
                                 DoEndGameSplit();
                             }
+                        } else if (cmd[0] == "Log")
+                        {
+                            LogWriter.WriteLine("{0}", line.Substring(4));
                         }
                     }
                 }

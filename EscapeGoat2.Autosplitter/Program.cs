@@ -18,6 +18,8 @@ namespace EscapeGoat2.Autosplitter
         private static int cTimeFixed = 0;
 
         static void Main(string[] args) {
+            if (args.Contains("-s"))
+                LogWriter.SetSlave();
             LogWriter.WriteLine("[GoatSplitter] Launched");
             goatState = new GoatState();
 

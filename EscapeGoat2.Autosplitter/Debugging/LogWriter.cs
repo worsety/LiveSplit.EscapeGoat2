@@ -8,15 +8,23 @@ namespace LiveSplit.EscapeGoat2.Debugging
 {
     public class LogWriter
     {
+        private static bool isSlave = false;
+
         public static void WriteLine(string format, params object[] arg) {
 #if DEBUG
             string str = format;
             if (arg.Length > 0)
                 str = String.Format(format, arg);
 
-            StreamWriter wr = new StreamWriter("_goatauto.log", true);
-            wr.WriteLine("[" + DateTime.Now + "] " + str);
-            wr.Close();
+            if (isSlave)
+            {
+                Console.WriteLine("Log {0}", str);
+            }
+            else {
+                StreamWriter wr = new StreamWriter("_goatauto.log", true);
+                wr.WriteLine("[" + DateTime.Now + "] " + str);
+                wr.Close();
+            }
 #endif
         }
 
@@ -33,6 +41,11 @@ namespace LiveSplit.EscapeGoat2.Debugging
 
                 LogWriter.WriteLine("  +{0,2:X2} {1} {2} = {3}", field.Offset, field.Type.Name, field.Name, output);
             }
+        }
+
+        public static void SetSlave()
+        {
+            isSlave = true;
         }
     }
 }
