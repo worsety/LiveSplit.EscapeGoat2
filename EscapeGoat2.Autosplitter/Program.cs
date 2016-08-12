@@ -77,23 +77,23 @@ namespace EscapeGoat2.Autosplitter
             }
         }
 
-        static void goatState_OnIGTFixed(object sender, EventArgs e) {
+        static void goatState_OnIGTFixed(object sender, GoatState.TimerEventArgs e) {
             if (timeFixed) return;
             timeFixed = true;
             Console.WriteLine("IGT Fixed");
         }
 
-        static void goatState_OnIGTChanged(object sender, EventArgs e) {
+        static void goatState_OnIGTChanged(object sender, GoatState.TimerEventArgs e) {
             timeFixed = false;
         }
 
-        static void goatState_OnIGTUpdated(object sender, EventArgs e) {
+        static void goatState_OnIGTUpdated(object sender, GoatState.TimerEventArgs e) {
             if (!timeFixed)
-                Console.WriteLine("IGT {0}", (TimeSpan?)sender);
+                Console.WriteLine("IGT {0}", e.gameTime);
         }
 
-        static void goatState_OnDeath(object sender, EventArgs e) {
-            Console.WriteLine("DEAD");
+        static void goatState_OnDeath(object sender, GoatState.DeathEventArgs e) {
+            Console.WriteLine("DEAD {0}", e.room);
         }
 
         static public void goatState_Reset() {

@@ -45,12 +45,28 @@ namespace LiveSplit.EscapeGoat2.State
 
         private State curState, oldState;
 
-        // Used for debugging purposes
+        public class TimerEventArgs : EventArgs
+        {
+            public TimeSpan gameTime;
+            public TimerEventArgs(TimeSpan gameTime)
+            {
+                this.gameTime = gameTime;
+            }
+        }
 
-        public event EventHandler OnTimerFixed;                         // Fires whenever the IGT between updates has not changed
-        public event EventHandler OnTimerChanged;                       // Fires whenever the IGT between updates has changed
-        public event EventHandler OnTimerUpdated;                       // Fires every update after the IGT is updated.
-        public event EventHandler OnDeath;                              // Fires every time you die, sadly we can't determine why you died.
+        public class DeathEventArgs : EventArgs
+        {
+            public Room room;
+            public DeathEventArgs(Room room)
+            {
+                this.room = room;
+            }
+        }
+
+        public event EventHandler<TimerEventArgs> OnTimerFixed;                         // Fires whenever the IGT between updates has not changed
+        public event EventHandler<TimerEventArgs> OnTimerChanged;                       // Fires whenever the IGT between updates has changed
+        public event EventHandler<TimerEventArgs> OnTimerUpdated;                       // Fires every update after the IGT is updated.
+        public event EventHandler<DeathEventArgs> OnDeath;                              // Fires every time you die, sadly we can't determine why you died.
 
         private int exceptionsCaught = 0;
 
@@ -155,26 +171,27 @@ namespace LiveSplit.EscapeGoat2.State
                 if (Math.Abs((curState.gameTime - splittime).Ticks) >= TimeSpan.FromMilliseconds(1).Ticks)
                     LogWriter.WriteLine("Split late by {0} frames", (double)((curState.gameTime - splittime).Ticks / frame.Ticks));
 
-                OnTimerUpdated(splittime, EventArgs.Empty);
+                OnTimerUpdated(this, new TimerEventArgs(splittime));
                 goatTriggers.SplitOnEndRoom(this.map.GetRoom(curState.roomID));
             }
 
             // Call all the relevant IGT based events depending on the time delta since the last pulse.
             if (curState.gameTime != oldState.gameTime)
-                if (OnTimerChanged != null) OnTimerChanged(curState.gameTime, EventArgs.Empty);
+                if (OnTimerChanged != null) OnTimerChanged(this, new TimerEventArgs(curState.gameTime));
 
-            if (OnTimerUpdated != null) OnTimerUpdated(curState.gameTime, EventArgs.Empty);
+            if (OnTimerUpdated != null) OnTimerUpdated(this, new TimerEventArgs(curState.gameTime));
 
             if (curState.gameTime == oldState.gameTime && !curState.paused)
-                if (OnTimerFixed != null) OnTimerFixed(curState.gameTime, EventArgs.Empty);
+                if (OnTimerFixed != null) OnTimerFixed(this, new TimerEventArgs(curState.gameTime));
 
             if (curState.playerState == PlayerState.Dead && oldState.playerState == PlayerState.Alive)
-                OnDeath(this, EventArgs.Empty);
+                OnDeath(this, new DeathEventArgs(map.GetRoom(curState.roomID)));
         }
 
         public void Update() {
             // If we haven't detected the start of a new game, check the memory
             // for the event
+            if (!curState.isStarted)
                 curState.isStarted = goatMemory.GetStartOfGame();
 
             if (!curState.isStarted)
