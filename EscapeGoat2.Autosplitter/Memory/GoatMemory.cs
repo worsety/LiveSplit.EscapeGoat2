@@ -28,7 +28,7 @@ namespace LiveSplit.EscapeGoat2.Memory
             return GetCachedStaticField("MagicalTimeBean.Bastille.Scenes.SceneManager", "_currentScene");
         }
 
-        public StaticField GetActionStage() {
+        public StaticField GetActionScene() {
             return GetCachedStaticField("MagicalTimeBean.Bastille.Scenes.SceneManager", "<ActionSceneInstance>k__BackingField");
         }
 
@@ -38,17 +38,17 @@ namespace LiveSplit.EscapeGoat2.Memory
             return new TimeSpan(game.Value.Value["targetElapsedTime"].Value.ForceCast("System.Int64").Read<Int64>());
         }
 
-        public long GetXnaGameFrames() {
+        public TimeSpan? GetXnaGameTime() {
             var game = GetGame();
             TimeSpan targetElapsedTime = GetTargetElapsedTime();
             TimeSpan accumulatedElapsedGameTime = new TimeSpan(game.Value.Value["accumulatedElapsedGameTime"].Value.ForceCast("System.Int64").Read<Int64>());
             if (accumulatedElapsedGameTime >= targetElapsedTime) // currently updating
-                return 0;
+                return null;
             TimeSpan game_totaltime = new TimeSpan(game.Value.Value["totalGameTime"].Value.ForceCast("System.Int64").Read<Int64>());
             if (game_totaltime != new TimeSpan(game.Value.Value["totalGameTime"].Value.ForceCast("System.Int64").Read<Int64>())
                 || accumulatedElapsedGameTime != new TimeSpan(game.Value.Value["accumulatedElapsedGameTime"].Value.ForceCast("System.Int64").Read<Int64>()))
-                return 0;
-            return (game_totaltime.Ticks + targetElapsedTime.Ticks / 2) / targetElapsedTime.Ticks;
+                return null; // paranoia
+            return game_totaltime;
         }
 
         public bool GetStartOfGame() {
@@ -63,16 +63,16 @@ namespace LiveSplit.EscapeGoat2.Memory
         }
 
         public ValuePointer? GetRoomInstance() {
-            var action = GetActionStage();
+            var action = GetActionScene();
             return GetCachedValuePointer(action, "RoomInstance");
         }
 
         public ValuePointer? GetPlayerObject()
         {
             // We determine if the player object is there or not by trying to cast the `_player`
-            // property in the `ActionStage` to a boolean. If there is a player object, this will
+            // property in the `ActionScene` to a boolean. If there is a player object, this will
             // return true, and false if not.
-            var action = GetActionStage();
+            var action = GetActionScene();
             if (!action.Value.HasValue) return null;
             return GetCachedValuePointer(action, "_player");
         }
@@ -85,18 +85,28 @@ namespace LiveSplit.EscapeGoat2.Memory
             return roomInstance.Value.GetFieldValue<Int32>("<RoomID>k__BackingField");
         }
 
+        public bool GetPaused()
+        {
+            // FIXME: Find something that works
+            return false;
+
+            var actionScene = GetActionScene();
+            var pauseMenu = actionScene.Value.Value["PauseMenu"];
+            var stageSelectDecorations = actionScene.Value.Value["StageSelectDecorations"];
+            if (!pauseMenu.HasValue || !stageSelectDecorations.HasValue) return false;
+
+            // Nope, a frame late
+            return pauseMenu.Value.GetFieldValue<bool>("Visible") || stageSelectDecorations.Value.GetFieldValue<bool>("Visible");
+
+            // Nope, it's created enabled
+            return stageSelectDecorations.Value.GetFieldValue<bool>("Enabled");
+        }
+
         public TimeSpan GetRoomTime()
         {
-            try
-            {
-                var action = GetRoomInstance();
-                Int64 time = action.Value["<RoomElapsedTime>k__BackingField"].Value.ForceCast("System.Int64").Read<Int64>();
-                return new TimeSpan(time);
-            }
-            catch
-            {
-                return TimeSpan.Zero;
-            }
+            var action = GetRoomInstance();
+            Int64 time = action.Value["<RoomElapsedTime>k__BackingField"].Value.ForceCast("System.Int64").Read<Int64>();
+            return new TimeSpan(time);
         }
 
         public bool? IsGoatInvuln()
@@ -106,40 +116,11 @@ namespace LiveSplit.EscapeGoat2.Memory
             return player.Value.GetFieldValue<bool>("<Invulnerable>k__BackingField");
         }
 
-        public bool? GetRoomTimerPaused()
+        public bool? EnteredDoor()
         {
             var action = GetRoomInstance();
             if (!action.HasValue) return null;
             return action.Value.GetFieldValue<bool>("<StopCountingElapsedTime>k__BackingField");
-        }
-
-        public bool? GetReplayRecordingPaused() {
-            // This value tells us if we have paused replay recording for the current room,
-            // this occurs if you enter a door exit.
-            var action = GetActionStage();
-            if (!action.Value.HasValue) return null;
-            return action.Value.Value.GetFieldValue<bool>("_pauseReplayRecording");
-        }
-
-        public MapPosition? GetCurrentPosition() {
-            // The current map position is located in the `GameState` in the
-            // `ActionStage`. We can read the x,y coordinate of the current
-            // room, allowing us to determine when room changes have occured.
-            // This position changes at the end of a room to the next
-            // appropriate room whether you later change rooms using the map.
-            // This position is used to sanity check when a user has left a
-            // room. This is to resolve rare issues where
-            // `_pauseReplayRecording` would toggle (likely due to reading
-            // memory just as it is being freed/moved) causing additional
-            // splits.
-            var action = GetActionStage();
-            var state = GetCachedValuePointer(action, "<GameState>k__BackingField");
-            if (!state.HasValue) return null;
-
-            var currentPosition = state.Value["_currentPosition"];
-            if (!currentPosition.HasValue) return null;;
-
-            return currentPosition.Value.ReadValue<MapPosition>();
         }
 
         public int? GetSheepOrbsCollected() {
@@ -147,7 +128,7 @@ namespace LiveSplit.EscapeGoat2.Memory
             // in the number of Sheep Orbs collected. We do this simply by
             // reading the length of the `_orbObtainedPositions` located in the
             // `GameState`.
-            var action = GetActionStage();
+            var action = GetActionScene();
             var state = GetCachedValuePointer(action, "<GameState>k__BackingField");
             if (!state.HasValue) return null;
 
@@ -161,7 +142,7 @@ namespace LiveSplit.EscapeGoat2.Memory
             // these fragments are called shards, and we actually count them by
             // reading the length of the `_secretRoomsBeaten` array located in
             // the `GameState`.
-            var action = GetActionStage();
+            var action = GetActionScene();
             var state = GetCachedValuePointer(action, "<GameState>k__BackingField");
             if (!state.HasValue) return null;
 
@@ -176,7 +157,7 @@ namespace LiveSplit.EscapeGoat2.Memory
             // the number of "ticks". We therefore read this value as an Int64
             // and then create a new TimeSpan object using that value.
             try {
-                var action = GetActionStage();
+                var action = GetActionScene();
                 var state = GetCachedValuePointer(action, "<GameState>k__BackingField");
                 Int64 time = state.Value["_totalTime"].Value.ForceCast("System.Int64").Read<Int64>();
                 return new TimeSpan(time);
@@ -185,9 +166,9 @@ namespace LiveSplit.EscapeGoat2.Memory
             }
         }
 
-        public bool? GetOnActionStage() {
+        public bool? GetOnActionScene() {
             StaticField current = GetCurrentScene();
-            StaticField action = GetActionStage();
+            StaticField action = GetActionScene();
 
             return (current.Value.Value.Address == action.Value.Value.Address);
         }
@@ -245,7 +226,7 @@ namespace LiveSplit.EscapeGoat2.Memory
         }
 
         public StaticField GetCachedStaticField(string klass, string fieldName) {
-            // Some static fields such as the `ActionStage` are read multiple times in a single update 
+            // Some static fields such as the `ActionScene` are read multiple times in a single update 
             // loop. We therefore cache these results to limit the number of values we have to read
             // from memory. This is done because external memory reads like we are doing are slow
             // so we'd like to reduce the number of them we make as much as possible.

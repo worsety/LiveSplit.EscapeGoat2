@@ -15,7 +15,7 @@ namespace EscapeGoat2.Autosplitter
     class Program
     {
         public static GoatState goatState;
-        private static bool timeFixed = true;
+        private static bool timeFixed = false;
 
         static void Main(string[] args) {
             if (args.Contains("-s"))
@@ -30,6 +30,7 @@ namespace EscapeGoat2.Autosplitter
             goatState.OnTimerFixed += goatState_OnIGTFixed;
             goatState.OnTimerChanged += goatState_OnIGTChanged;
             goatState.OnTimerUpdated += goatState_OnIGTUpdated;
+            goatState.OnDeath += goatState_OnDeath;
 
             new Thread(new ThreadStart(ReceiveCommands)).Start();
 
@@ -48,8 +49,6 @@ namespace EscapeGoat2.Autosplitter
                 LogWriter.WriteLine("Received {0}", line);
                 if (line == "reset") {
                     goatState_Reset();
-                } else if (line == "undo") {
-                    goatState_UndoSplit();
                 }
             }
         }
@@ -93,16 +92,14 @@ namespace EscapeGoat2.Autosplitter
                 Console.WriteLine("IGT {0}", (TimeSpan?)sender);
         }
 
-        static public void goatState_UndoSplit() {
-            // On undo we want to reset the lastRoomID as we do not know the state
-            // when the undo occured.
-            goatState.lastRoomID = 0;
+        static void goatState_OnDeath(object sender, EventArgs e) {
+            Console.WriteLine("DEAD");
         }
 
         static public void goatState_Reset() {
             // Reset the autosplitter state whenever LiveSplit is reset
             goatState.Reset();
-            timeFixed = true;
+            timeFixed = false;
         }
     }
 }
