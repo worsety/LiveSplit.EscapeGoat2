@@ -86,6 +86,7 @@ namespace LiveSplit.EscapeGoat2.State
             reset = false;
             oldState = curState = new State();
             exceptionsCaught = 0;
+            OnTimerChanged(this, new TimerEventArgs(TimeSpan.Zero)); // reset timer fixed flag, has to be done from this thread
         }
 
         public void Dispose() {
@@ -150,7 +151,8 @@ namespace LiveSplit.EscapeGoat2.State
             }
 
             // Everything's fine, let's generate notifications
-            Broadcast();
+            if (!reset)
+                Broadcast();
 
             // This acts like a transaction commit, while the lack of it if we return or throw is a rollback
             oldState = curState;

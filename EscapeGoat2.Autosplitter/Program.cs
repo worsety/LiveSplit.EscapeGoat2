@@ -99,7 +99,6 @@ namespace EscapeGoat2.Autosplitter
         static public void goatState_Reset() {
             // Reset the autosplitter state whenever LiveSplit is reset
             goatState.Reset();
-            timeFixed = false;
         }
     }
 }
