@@ -233,12 +233,21 @@ namespace LiveSplit.EscapeGoat2
         }
 
         public void DoDeath(string arg) {
-            runDeathCount++; sessionDeathCount++; totalDeathCount++;
+            List<Dictionary<int, int>> roomDeathDicts = new List<Dictionary<int, int>> { runRoomDeaths, sessionRoomDeaths };
+
+            runDeathCount++; sessionDeathCount++;
+            if (Settings.saveStats) {
+                totalDeathCount++;
+                roomDeathDicts.Add(totalRoomDeaths);
+                _state.Layout.HasChanged = true;
+            }
+
             int roomKey = int.Parse(arg);
-            int roomDeathCount = 0;
-            totalRoomDeaths.TryGetValue(roomKey, out roomDeathCount);
-            totalRoomDeaths[roomKey] = roomDeathCount + 1;
-            _state.Layout.HasChanged = true;
+            foreach (var roomDeaths in roomDeathDicts) {
+                int roomDeathCount = 0;
+                roomDeaths.TryGetValue(roomKey, out roomDeathCount);
+                roomDeaths[roomKey] = roomDeathCount + 1;
+            }
         }
 
         public bool isLastSplit() {
@@ -281,7 +290,7 @@ namespace LiveSplit.EscapeGoat2
             totalRoomDeaths.Clear();
             foreach (XmlElement room in data.SelectNodes("./TotalRoomDeaths/Room")) {
                 try {
-                    string id = room.GetAttribute("id"), count = room.GetAttribute("count");
+                    string id = room.GetAttribute("id"), count = room.GetAttribute("deaths");
                     totalRoomDeaths[int.Parse(id)] = int.Parse(count);
                 } catch (Exception) { }
             }

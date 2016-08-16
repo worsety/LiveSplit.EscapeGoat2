@@ -17,6 +17,7 @@ namespace LiveSplit.EscapeGoat2
         public bool showDeathsRun { get; set; }
         public bool showDeathsSession { get; set; }
         public bool showDeathsTotal { get; set; }
+        public bool saveStats { get; set; }
 
         public ComponentSettings() {
             InitializeComponent();
@@ -24,12 +25,14 @@ namespace LiveSplit.EscapeGoat2
             deathsRun.DataBindings.Add("Checked", this, "showDeathsRun", false, DataSourceUpdateMode.OnPropertyChanged);
             deathsSession.DataBindings.Add("Checked", this, "showDeathsSession", false, DataSourceUpdateMode.OnPropertyChanged);
             deathsTotal.DataBindings.Add("Checked", this, "showDeathsTotal", false, DataSourceUpdateMode.OnPropertyChanged);
+            saveStatsBox.DataBindings.Add("Checked", this, "saveStats", false, DataSourceUpdateMode.OnPropertyChanged);
         }
 
         public void SetSettings(XmlNode settings) {
             showDeathsRun = SettingsHelper.ParseBool(settings["ShowDeathsRun"], true);
             showDeathsSession = SettingsHelper.ParseBool(settings["ShowDeathsSession"], true);
             showDeathsTotal = SettingsHelper.ParseBool(settings["ShowDeathsTotal"], true);
+            saveStats = SettingsHelper.ParseBool(settings["SaveStats"], true);
         }
 
         public XmlNode GetSettings(XmlDocument document) {
@@ -38,6 +41,7 @@ namespace LiveSplit.EscapeGoat2
             SettingsHelper.CreateSetting(document, root, "ShowDeathsRun", showDeathsRun);
             SettingsHelper.CreateSetting(document, root, "ShowDeathsSession", showDeathsSession);
             SettingsHelper.CreateSetting(document, root, "ShowDeathsTotal", showDeathsTotal);
+            SettingsHelper.CreateSetting(document, root, "SaveStats", saveStats);
             return root;
         }
     }
