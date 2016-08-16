@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using LiveSplit.EscapeGoat2.Debugging;
 
-namespace LiveSplit.EscapeGoat2.State
+namespace LiveSplit.EscapeGoat2
 {
     public enum RoomType
     {

@@ -7,12 +7,13 @@ using LiveSplit.Model;
 using LiveSplit.UI;
 using LiveSplit.UI.Components;
 using LiveSplit.EscapeGoat2.Debugging;
+using System.Collections.Generic;
 
 namespace LiveSplit.EscapeGoat2
 {
-    public class EscapeGoat2Component : LogicComponent
+    public class EscapeGoat2Component : IComponent
     {
-        public override string ComponentName {
+        public string ComponentName {
             get { return "Escape Goat 2 Auto Splitter"; }
         }
 
@@ -21,8 +22,33 @@ namespace LiveSplit.EscapeGoat2
 
         protected TimerModel Model { get; set; }
 
+        private ComponentRendererComponent InternalComponent;
+        private List<IComponent> VisibleComponents = new List<IComponent>();
+        private InfoTextComponent deathCounterComponent;
+        private ComponentSettings Settings = new ComponentSettings();
+
+        private Dictionary<int, int> runRoomDeaths = new Dictionary<int, int>();
+        private Dictionary<int, int> sessionRoomDeaths = new Dictionary<int, int>();
+        private Dictionary<int, int> totalRoomDeaths = new Dictionary<int, int>();
+        private int runDeathCount = 0, sessionDeathCount = 0, totalDeathCount = 0;
+
+        public float HorizontalWidth => InternalComponent.HorizontalWidth;
+        public float VerticalHeight => InternalComponent.VerticalHeight;
+        public float MinimumWidth => InternalComponent.MinimumWidth;
+        public float MinimumHeight => InternalComponent.MinimumHeight;
+        public float PaddingTop => InternalComponent.PaddingTop;
+        public float PaddingLeft => InternalComponent.PaddingLeft;
+        public float PaddingBottom => InternalComponent.PaddingBottom;
+        public float PaddingRight => InternalComponent.PaddingRight;
+
+        public IDictionary<string, Action> ContextMenuControls => null;
+
         public EscapeGoat2Component(LiveSplitState state) {
             _state = state;
+
+            deathCounterComponent = new InfoTextComponent("", "");
+            InternalComponent = new ComponentRendererComponent();
+            InternalComponent.VisibleComponents = VisibleComponents;
 
             ProcessStartInfo processStartInfo;
 
@@ -42,7 +68,7 @@ namespace LiveSplit.EscapeGoat2
                 delegate(object sender, DataReceivedEventArgs e) {
                     if (!String.IsNullOrEmpty(e.Data)) {
                         string line = e.Data.ToString();
-                        string[] cmd = line.Split();
+                        string[] cmd = line.Split(new Char[] { ' ' }, 2);
 
                         if (cmd[0] == "Start") {
                             DoStart();
@@ -55,9 +81,10 @@ namespace LiveSplit.EscapeGoat2
                             } else {
                                 DoEndGameSplit();
                             }
-                        } else if (cmd[0] == "Log")
-                        {
-                            LogWriter.WriteLine("{0}", line.Substring(4));
+                        } else if (cmd[0] == "Log") {
+                            LogWriter.WriteLine("{0}", cmd[1]);
+                        } else if (cmd[0] == "DEAD") {
+                            DoDeath(cmd[1]);
                         }
                     }
                 }
@@ -74,7 +101,9 @@ namespace LiveSplit.EscapeGoat2
             process.BeginOutputReadLine();
         }
 
-        public override void Dispose() {
+        public void Dispose() {
+            InternalComponent.Dispose();
+
             if (process != null && !process.HasExited) {
                 process.CancelOutputRead();
                 process.CloseMainWindow();
@@ -93,7 +122,48 @@ namespace LiveSplit.EscapeGoat2
             }
         }
 
-        public override void Update(IInvalidator invalidator, LiveSplitState state, float width, float height, LayoutMode mode) {
+        private void PrepareDraw(LiveSplitState state) {
+            if (Settings.showDeathsRun || Settings.showDeathsSession || Settings.showDeathsTotal) {
+                if (Settings.showDeathsRun && !Settings.showDeathsSession && !Settings.showDeathsTotal)
+                    deathCounterComponent.InformationName = "Deaths (Run)";
+                else if (!Settings.showDeathsRun && Settings.showDeathsSession && !Settings.showDeathsTotal)
+                    deathCounterComponent.InformationName = "Deaths (Session)";
+                else if (!Settings.showDeathsRun && !Settings.showDeathsSession && Settings.showDeathsTotal)
+                    deathCounterComponent.InformationName = "Deaths (Total)";
+                else {
+                    List<string> nameArgs = new List<string>();
+                    if (Settings.showDeathsRun) nameArgs.Add("Run");
+                    if (Settings.showDeathsSession) nameArgs.Add("S");
+                    if (Settings.showDeathsTotal) nameArgs.Add("T");
+                    deathCounterComponent.InformationName = String.Format("Deaths ({0})", string.Join("/", nameArgs));
+                }
+                List<string> formatArgs = new List<string>();
+                if (Settings.showDeathsRun) formatArgs.Add("{0}");
+                if (Settings.showDeathsSession) formatArgs.Add("{1}");
+                if (Settings.showDeathsTotal) formatArgs.Add("{2}");
+                deathCounterComponent.InformationValue = String.Format(String.Join("/", formatArgs), runDeathCount, sessionDeathCount, totalDeathCount);
+
+                if (!VisibleComponents.Contains(deathCounterComponent))
+                    VisibleComponents.Add(deathCounterComponent);
+                deathCounterComponent.NameLabel.ForeColor = state.LayoutSettings.TextColor;
+                deathCounterComponent.ValueLabel.ForeColor = state.LayoutSettings.TextColor;
+                deathCounterComponent.NameLabel.HasShadow = state.LayoutSettings.DropShadows;
+            }
+            else if (VisibleComponents.Contains(deathCounterComponent))
+                VisibleComponents.Remove(deathCounterComponent);
+        }
+
+        public void DrawHorizontal(System.Drawing.Graphics g, LiveSplitState state, float height, System.Drawing.Region clipRegion) {
+            PrepareDraw(state);
+            InternalComponent.DrawHorizontal(g, state, height, clipRegion);
+        }
+
+        public void DrawVertical(System.Drawing.Graphics g, LiveSplitState state, float width, System.Drawing.Region clipRegion) {
+            PrepareDraw(state);
+            InternalComponent.DrawVertical(g, state, width, clipRegion);
+        }
+
+        public void Update(IInvalidator invalidator, LiveSplitState state, float width, float height, LayoutMode mode) {
             // Hook a TimerModel to the current LiveSplit state
             if (Model == null) {
                 Model = new TimerModel() { CurrentState = state };
@@ -105,6 +175,9 @@ namespace LiveSplit.EscapeGoat2
                 state.OnSkipSplit += OnSkipSplit;
                 state.OnUndoSplit += OnUndoSplit;
             }
+
+            if (invalidator != null)
+                InternalComponent.Update(invalidator, state, width, height, mode);
         }
 
         public void OnUndoSplit(object sender, EventArgs e) {
@@ -118,6 +191,7 @@ namespace LiveSplit.EscapeGoat2
             // Reset the autosplitter state whenever LiveSplit is reset
             LogWriter.WriteLine("[LiveSplit] Reset.");
             process.StandardInput.WriteLine("reset");
+            runDeathCount = 0;
         }
 
         public void DoStart() {
@@ -158,6 +232,15 @@ namespace LiveSplit.EscapeGoat2
             }
         }
 
+        public void DoDeath(string arg) {
+            runDeathCount++; sessionDeathCount++; totalDeathCount++;
+            int roomKey = int.Parse(arg);
+            int roomDeathCount = 0;
+            totalRoomDeaths.TryGetValue(roomKey, out roomDeathCount);
+            totalRoomDeaths[roomKey] = roomDeathCount + 1;
+            _state.Layout.HasChanged = true;
+        }
+
         public bool isLastSplit() {
             int idx = _state.CurrentSplitIndex;
             return (idx == _state.Run.Count - 1);
@@ -183,14 +266,44 @@ namespace LiveSplit.EscapeGoat2
             LogWriter.WriteLine("[LiveSplit] Start.");
         }
 
-        public override Control GetSettingsControl(LayoutMode mode) {
-            return null;
+        public Control GetSettingsControl(LayoutMode mode) {
+            return Settings;
         }
 
-        public override void SetSettings(XmlNode settings) { }
+        public void SetSettings(XmlNode settings) {
+            Settings.SetSettings(settings);
 
-        public override XmlNode GetSettings(XmlDocument document) {
-            return document.CreateElement("x");
+            XmlNode data = settings["Data"];
+            if (data == null)
+                return;
+
+            totalDeathCount = SettingsHelper.ParseInt(data["TotalDeaths"]);
+            totalRoomDeaths.Clear();
+            foreach (XmlElement room in data.SelectNodes("./TotalRoomDeaths/Room")) {
+                try {
+                    string id = room.GetAttribute("id"), count = room.GetAttribute("count");
+                    totalRoomDeaths[int.Parse(id)] = int.Parse(count);
+                } catch (Exception) { }
+            }
+        }
+
+        public XmlNode GetSettings(XmlDocument document) {
+            XmlNode root = Settings.GetSettings(document);
+            XmlElement data = document.CreateElement("Data");
+
+            SettingsHelper.CreateSetting(document, data, "TotalDeaths", totalDeathCount);
+
+            XmlElement roomDeaths = document.CreateElement("TotalRoomDeaths");
+            foreach (var room in totalRoomDeaths) {
+                XmlElement e = document.CreateElement("Room");
+                e.SetAttribute("id", room.Key.ToString());
+                e.SetAttribute("deaths", room.Value.ToString());
+                roomDeaths.AppendChild(e);
+            }
+            data.AppendChild(roomDeaths);
+            root.AppendChild(data);
+
+            return root;
         }
     }
 }

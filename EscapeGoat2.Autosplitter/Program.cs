@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using System.IO;
 using System.Diagnostics;
 using System.Threading;
+using LiveSplit.EscapeGoat2;
 using LiveSplit.EscapeGoat2.State;
 using LiveSplit.EscapeGoat2.Memory;
 using LiveSplit.EscapeGoat2.Debugging;
@@ -93,7 +94,7 @@ namespace EscapeGoat2.Autosplitter
         }
 
         static void goatState_OnDeath(object sender, GoatState.DeathEventArgs e) {
-            Console.WriteLine("DEAD {0}", e.room);
+            Console.WriteLine("DEAD {0}", e.room.id);
         }
 
         static public void goatState_Reset() {

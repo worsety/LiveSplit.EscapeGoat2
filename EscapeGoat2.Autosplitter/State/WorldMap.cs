@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using LiveSplit.EscapeGoat2.Debugging;
 
-namespace LiveSplit.EscapeGoat2.State
+namespace LiveSplit.EscapeGoat2
 {
     // The internal variables here are named inconsitently to the wider project as this structure
     // mimics the `MapPosition` struct used internally by Escape Goat 2. By keeping the variables
