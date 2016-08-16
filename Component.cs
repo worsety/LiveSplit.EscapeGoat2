@@ -26,11 +26,13 @@ namespace LiveSplit.EscapeGoat2
         private List<IComponent> VisibleComponents = new List<IComponent>();
         private InfoTextComponent deathCounterComponent;
         private ComponentSettings Settings = new ComponentSettings();
+        private RoomDeathWindow roomDeathWindow;
 
-        private Dictionary<int, int> runRoomDeaths = new Dictionary<int, int>();
-        private Dictionary<int, int> sessionRoomDeaths = new Dictionary<int, int>();
-        private Dictionary<int, int> totalRoomDeaths = new Dictionary<int, int>();
+        public Dictionary<int, int> runRoomDeaths = new Dictionary<int, int>();
+        public Dictionary<int, int> sessionRoomDeaths = new Dictionary<int, int>();
+        public Dictionary<int, int> totalRoomDeaths = new Dictionary<int, int>();
         private int runDeathCount = 0, sessionDeathCount = 0, totalDeathCount = 0;
+        public string runCategory;
 
         public float HorizontalWidth => InternalComponent.HorizontalWidth;
         public float VerticalHeight => InternalComponent.VerticalHeight;
@@ -40,11 +42,16 @@ namespace LiveSplit.EscapeGoat2
         public float PaddingLeft => InternalComponent.PaddingLeft;
         public float PaddingBottom => InternalComponent.PaddingBottom;
         public float PaddingRight => InternalComponent.PaddingRight;
-
-        public IDictionary<string, Action> ContextMenuControls => null;
+        public IDictionary<string, Action> ContextMenuControls { get; protected set; }
 
         public EscapeGoat2Component(LiveSplitState state) {
             _state = state;
+            runCategory = state.Run.CategoryName;
+
+            ContextMenuControls = new Dictionary<string, Action>();
+            ContextMenuControls.Add("EG2: View room death statistics", ViewDeaths);
+
+            roomDeathWindow = new RoomDeathWindow(this);
 
             deathCounterComponent = new InfoTextComponent("", "");
             InternalComponent = new ComponentRendererComponent();
@@ -101,6 +108,11 @@ namespace LiveSplit.EscapeGoat2
             process.BeginOutputReadLine();
         }
 
+        public void ViewDeaths()
+        {
+            roomDeathWindow.Show();
+        }
+
         public void Dispose() {
             InternalComponent.Dispose();
 
@@ -129,7 +141,7 @@ namespace LiveSplit.EscapeGoat2
                 else if (!Settings.showDeathsRun && Settings.showDeathsSession && !Settings.showDeathsTotal)
                     deathCounterComponent.InformationName = "Deaths (Session)";
                 else if (!Settings.showDeathsRun && !Settings.showDeathsSession && Settings.showDeathsTotal)
-                    deathCounterComponent.InformationName = "Deaths (Total)";
+                    deathCounterComponent.InformationName = "Deaths (Tracked)";
                 else {
                     List<string> nameArgs = new List<string>();
                     if (Settings.showDeathsRun) nameArgs.Add("Run");
@@ -176,6 +188,12 @@ namespace LiveSplit.EscapeGoat2
                 state.OnUndoSplit += OnUndoSplit;
             }
 
+            if (state.Run.CategoryName != runCategory) {
+                runCategory = state.Run.CategoryName;
+                roomDeathWindow.FillRoomList();
+                roomDeathWindow.UpdateDeathList();
+            }
+
             if (invalidator != null)
                 InternalComponent.Update(invalidator, state, width, height, mode);
         }
@@ -192,6 +210,8 @@ namespace LiveSplit.EscapeGoat2
             LogWriter.WriteLine("[LiveSplit] Reset.");
             process.StandardInput.WriteLine("reset");
             runDeathCount = 0;
+            runRoomDeaths.Clear();
+            roomDeathWindow.UpdateDeathList();
         }
 
         public void DoStart() {
@@ -248,6 +268,8 @@ namespace LiveSplit.EscapeGoat2
                 roomDeaths.TryGetValue(roomKey, out roomDeathCount);
                 roomDeaths[roomKey] = roomDeathCount + 1;
             }
+
+            roomDeathWindow.UpdateDeathList(roomKey);
         }
 
         public bool isLastSplit() {
@@ -294,6 +316,7 @@ namespace LiveSplit.EscapeGoat2
                     totalRoomDeaths[int.Parse(id)] = int.Parse(count);
                 } catch (Exception) { }
             }
+            roomDeathWindow.UpdateDeathList();
         }
 
         public XmlNode GetSettings(XmlDocument document) {

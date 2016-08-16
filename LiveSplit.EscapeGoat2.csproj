@@ -84,6 +84,8 @@
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Drawing" />
     <Reference Include="System.Web" />
     <Reference Include="System.Web.Extensions" />
     <Reference Include="System.Windows.Forms" />
@@ -98,6 +100,18 @@
     <Compile Include="Component.cs" />
     <Compile Include="Factory.cs" />
     <Compile Include="Debugging\LogWriter.cs" />
+    <Compile Include="ComponentSettings.cs">
+      <SubType>UserControl</SubType>
+    </Compile>
+    <Compile Include="ComponentSettings.Designer.cs">
+      <DependentUpon>ComponentSettings.cs</DependentUpon>
+    </Compile>
+    <Compile Include="RoomDeathWindow.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="RoomDeathWindow.Designer.cs">
+      <DependentUpon>RoomDeathWindow.cs</DependentUpon>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <WCFMetadata Include="Service References\" />
@@ -127,6 +141,18 @@
   <ItemGroup>
     <Content Include="Components\LiveSplit.EscapeGoat2.Updates.xml" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="ComponentSettings.resx">
+      <DependentUpon>ComponentSettings.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="RoomDeathWindow.resx">
+      <DependentUpon>RoomDeathWindow.cs</DependentUpon>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Properties\DataSources\ComponentSettings.datasource" />
+  </ItemGroup>
+  <Import Project="EscapeGoat2.Shared\EscapeGoat2.Shared.projitems" Label="Shared" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>copy $(TargetPath) "$(SolutionDir)Components\$(TargetFileName)
