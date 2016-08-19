@@ -134,8 +134,10 @@ namespace LiveSplit.EscapeGoat2
             }
         }
 
-        private void PrepareDraw(LiveSplitState state) {
-            if (Settings.showDeathsRun || Settings.showDeathsSession || Settings.showDeathsTotal) {
+        private void UpdateDeathCounter(IInvalidator invalidator, LiveSplitState state, float width, float height, LayoutMode mode)
+        {
+            if (Settings.showDeathsRun || Settings.showDeathsSession || Settings.showDeathsTotal)
+            {
                 if (Settings.showDeathsRun && !Settings.showDeathsSession && !Settings.showDeathsTotal)
                     deathCounterComponent.InformationName = "Deaths (Run)";
                 else if (!Settings.showDeathsRun && Settings.showDeathsSession && !Settings.showDeathsTotal)
@@ -157,12 +159,16 @@ namespace LiveSplit.EscapeGoat2
 
                 if (!VisibleComponents.Contains(deathCounterComponent))
                     VisibleComponents.Add(deathCounterComponent);
-                deathCounterComponent.NameLabel.ForeColor = state.LayoutSettings.TextColor;
-                deathCounterComponent.ValueLabel.ForeColor = state.LayoutSettings.TextColor;
-                deathCounterComponent.NameLabel.HasShadow = state.LayoutSettings.DropShadows;
             }
             else if (VisibleComponents.Contains(deathCounterComponent))
                 VisibleComponents.Remove(deathCounterComponent);
+
+            deathCounterComponent.NameLabel.ForeColor = state.LayoutSettings.TextColor;
+            deathCounterComponent.ValueLabel.ForeColor = state.LayoutSettings.TextColor;
+            deathCounterComponent.NameLabel.HasShadow = state.LayoutSettings.DropShadows;
+        }
+
+        private void PrepareDraw(LiveSplitState state) {
         }
 
         public void DrawHorizontal(System.Drawing.Graphics g, LiveSplitState state, float height, System.Drawing.Region clipRegion) {
@@ -194,6 +200,8 @@ namespace LiveSplit.EscapeGoat2
                 roomDeathWindow.UpdateDeathList();
             }
 
+            UpdateDeathCounter(invalidator, state, width, height, mode);
+
             if (invalidator != null)
                 InternalComponent.Update(invalidator, state, width, height, mode);
         }
@@ -206,12 +214,15 @@ namespace LiveSplit.EscapeGoat2
         }
 
         public void OnReset(object sender, TimerPhase e) {
-            // Reset the autosplitter state whenever LiveSplit is reset
-            LogWriter.WriteLine("[LiveSplit] Reset.");
-            process.StandardInput.WriteLine("reset");
-            runDeathCount = 0;
-            runRoomDeaths.Clear();
-            roomDeathWindow.UpdateDeathList();
+            lock (runRoomDeaths)
+            {
+                // Reset the autosplitter state whenever LiveSplit is reset
+                LogWriter.WriteLine("[LiveSplit] Reset.");
+                process.StandardInput.WriteLine("reset");
+                runDeathCount = 0;
+                runRoomDeaths.Clear();
+                roomDeathWindow.UpdateDeathList();
+            }
         }
 
         public void DoStart() {
@@ -253,23 +264,26 @@ namespace LiveSplit.EscapeGoat2
         }
 
         public void DoDeath(string arg) {
-            List<Dictionary<int, int>> roomDeathDicts = new List<Dictionary<int, int>> { runRoomDeaths, sessionRoomDeaths };
+            lock (runRoomDeaths) {
+                List<Dictionary<int, int>> roomDeathDicts = new List<Dictionary<int, int>> { runRoomDeaths, sessionRoomDeaths };
 
-            runDeathCount++; sessionDeathCount++;
-            if (Settings.saveStats) {
-                totalDeathCount++;
-                roomDeathDicts.Add(totalRoomDeaths);
-                _state.Layout.HasChanged = true;
+                runDeathCount++; sessionDeathCount++;
+                if (Settings.saveStats)
+                {
+                    totalDeathCount++;
+                    roomDeathDicts.Add(totalRoomDeaths);
+                }
+
+                int roomKey = int.Parse(arg);
+                foreach (var roomDeaths in roomDeathDicts)
+                {
+                    int roomDeathCount = 0;
+                    roomDeaths.TryGetValue(roomKey, out roomDeathCount);
+                    roomDeaths[roomKey] = roomDeathCount + 1;
+                }
+
+                roomDeathWindow.UpdateDeathList(roomKey);
             }
-
-            int roomKey = int.Parse(arg);
-            foreach (var roomDeaths in roomDeathDicts) {
-                int roomDeathCount = 0;
-                roomDeaths.TryGetValue(roomKey, out roomDeathCount);
-                roomDeaths[roomKey] = roomDeathCount + 1;
-            }
-
-            roomDeathWindow.UpdateDeathList(roomKey);
         }
 
         public bool isLastSplit() {

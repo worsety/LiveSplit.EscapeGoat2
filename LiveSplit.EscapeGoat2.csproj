@@ -149,9 +149,6 @@
       <DependentUpon>RoomDeathWindow.cs</DependentUpon>
     </EmbeddedResource>
   </ItemGroup>
-  <ItemGroup>
-    <None Include="Properties\DataSources\ComponentSettings.datasource" />
-  </ItemGroup>
   <Import Project="EscapeGoat2.Shared\EscapeGoat2.Shared.projitems" Label="Shared" />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
