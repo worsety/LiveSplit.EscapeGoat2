@@ -33,7 +33,7 @@ namespace LiveSplit.EscapeGoat2.Memory
         // Initialize from System.Collections.Generic.List
         public ArrayPointer(ValuePointer state, string fieldName, string fieldType) {
             Mangler = state.Mangler;
-            var tList =  Mangler.GetTypeByName("System.Collections.Generic.List<T>") // CLR 4.x
+            var tList =  Mangler.GetTypeByName("System.Collections.Generic.List<T>", false) // CLR 4.x
                          ??
                          Mangler.GetTypeByName("System.Collections.Generic.List`1"); // CLR 2.x
 

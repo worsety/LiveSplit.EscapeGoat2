@@ -60,15 +60,15 @@ namespace LiveSplit.EscapeGoat2.Memory
             return AllValuesOfType(from tn in typeNames select GetTypeByName(tn));
         }
 
-        public ClrType GetTypeByName(string typename, bool log=true)
+        public ClrType GetTypeByName(string typename, bool throwifmissing=true)
         {
             if (typeCache.ContainsKey(typename))
                 return typeCache[typename];
             ClrType ret = Heap.GetTypeByName(typename);
             if (ret != null)
                 typeCache[typename] = ret;
-            else if (log)
-                LogWriter.WriteLine("Type lookup failed: {0}", typename);
+            else if (throwifmissing)
+                throw new Exception(String.Format("Type lookup failed: {0}", typename));
             return ret;
         }
 

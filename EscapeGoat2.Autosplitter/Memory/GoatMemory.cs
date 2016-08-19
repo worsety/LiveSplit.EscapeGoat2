@@ -209,9 +209,10 @@ namespace LiveSplit.EscapeGoat2.Memory
                 try {
                     pm = new ProcessMangler(proc.Id);
                     this.isMangled = true;
-                } catch (Exception e) {
+                } catch (Exception) {
                     proc.Dispose();
-                    throw e;
+                    proc = null;
+                    throw;
                 }
             }
 
@@ -235,8 +236,7 @@ namespace LiveSplit.EscapeGoat2.Memory
                 try {
                     staticCache[key] = new StaticField(pm, klass, fieldName);
                 } catch (Exception e) {
-                    LogWriter.WriteLine(key);
-                    throw e;
+                    throw new Exception(String.Format("Static field not found: {0} {1}", key, e));
                 }
             }
             return staticCache[key];
@@ -253,8 +253,7 @@ namespace LiveSplit.EscapeGoat2.Memory
                     }
                     pointerCache[key] = vp.Value;
                 } catch (Exception e) {
-                    LogWriter.WriteLine(key);
-                    throw e;
+                    throw new Exception(String.Format("Value pointer not found: {0} {1}", key, e));
                 }
             }
             return pointerCache[key];
