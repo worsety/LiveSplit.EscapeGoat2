@@ -32,7 +32,7 @@ namespace LiveSplit.EscapeGoat2.Memory
             get {
                 var field = Type.GetFieldByName(fieldName);
                 if (field == null)
-                    throw new Exception("No field with this name");
+                    throw new Exception(String.Format("No field with this name '{0}'", fieldName));
 
                 ulong address;
 
@@ -56,7 +56,7 @@ namespace LiveSplit.EscapeGoat2.Memory
         public T GetFieldValue<T>(string fieldName) {
             var field = Type.GetFieldByName(fieldName);
             if (field == null)
-                throw new Exception("No field with this name");
+                throw new Exception(String.Format("No field with this name '{0}'", fieldName));
             return (T)Convert.ChangeType(field.GetValue(Address), typeof(T));
         }
 

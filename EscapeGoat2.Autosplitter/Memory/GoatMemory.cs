@@ -39,15 +39,19 @@ namespace LiveSplit.EscapeGoat2.Memory
         }
 
         public TimeSpan? GetXnaGameTime() {
-            var game = GetGame();
-            TimeSpan targetElapsedTime = GetTargetElapsedTime();
-            TimeSpan accumulatedElapsedGameTime = new TimeSpan(game.Value.Value["accumulatedElapsedGameTime"].Value.ForceCast("System.Int64").Read<Int64>());
-            if (accumulatedElapsedGameTime >= targetElapsedTime) // currently updating
-                return null;
+            var game = GetGame();   
+            bool isFixedTimeStep = game.Value.Value.GetFieldValue<bool>("isFixedTimeStep");
             TimeSpan game_totaltime = new TimeSpan(game.Value.Value["totalGameTime"].Value.ForceCast("System.Int64").Read<Int64>());
-            if (game_totaltime != new TimeSpan(game.Value.Value["totalGameTime"].Value.ForceCast("System.Int64").Read<Int64>())
-                || accumulatedElapsedGameTime != new TimeSpan(game.Value.Value["accumulatedElapsedGameTime"].Value.ForceCast("System.Int64").Read<Int64>()))
-                return null; // paranoia
+            if (isFixedTimeStep) {
+                TimeSpan targetElapsedTime = GetTargetElapsedTime();
+                TimeSpan accumulatedElapsedGameTime = new TimeSpan(game.Value.Value["accumulatedElapsedGameTime"].Value.ForceCast("System.Int64").Read<Int64>());
+                if (accumulatedElapsedGameTime >= targetElapsedTime) // currently updating
+                    return null;
+            } else {
+                TimeSpan lastFrameElapsedTime = new TimeSpan(game.Value.Value["lastFrameElapsedGameTime"].Value.ForceCast("System.Int64").Read<Int64>());
+                if (lastFrameElapsedTime != TimeSpan.Zero && game.Value.Value["<RenderCoordinator>k__BackingField"].Value.GetFieldValue<bool>("SynchronousDrawsEnabled"))
+                    return null;
+            }
             return game_totaltime;
         }
 
