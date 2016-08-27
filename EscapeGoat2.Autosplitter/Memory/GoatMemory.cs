@@ -42,6 +42,7 @@ namespace LiveSplit.EscapeGoat2.Memory
             var game = GetGame();   
             bool isFixedTimeStep = game.Value.Value.GetFieldValue<bool>("isFixedTimeStep");
             TimeSpan game_totaltime = new TimeSpan(game.Value.Value["totalGameTime"].Value.ForceCast("System.Int64").Read<Int64>());
+            // little issue: when the game flips this, it does so at the start of an update
             if (isFixedTimeStep) {
                 TimeSpan targetElapsedTime = GetTargetElapsedTime();
                 TimeSpan accumulatedElapsedGameTime = new TimeSpan(game.Value.Value["accumulatedElapsedGameTime"].Value.ForceCast("System.Int64").Read<Int64>());
@@ -49,7 +50,8 @@ namespace LiveSplit.EscapeGoat2.Memory
                     return null;
             } else {
                 TimeSpan lastFrameElapsedTime = new TimeSpan(game.Value.Value["lastFrameElapsedGameTime"].Value.ForceCast("System.Int64").Read<Int64>());
-                if (lastFrameElapsedTime != TimeSpan.Zero && game.Value.Value["<RenderCoordinator>k__BackingField"].Value.GetFieldValue<bool>("SynchronousDrawsEnabled"))
+                if (lastFrameElapsedTime != TimeSpan.Zero // outside of Update(), BeginDraw(), Draw() and EndDraw()
+                    && !game.Value.Value["<RenderCoordinator>k__BackingField"].Value["WaitStopwatch"].Value.GetFieldValue<bool>("isRunning"))
                     return null;
             }
             return game_totaltime;

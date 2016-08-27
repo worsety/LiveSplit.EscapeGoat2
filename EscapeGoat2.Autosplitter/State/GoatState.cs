@@ -132,6 +132,8 @@ namespace LiveSplit.EscapeGoat2.State
         public void Pulse() {
             curState = oldState;
 
+            TimeSpan frame = goatMemory.GetTargetElapsedTime();
+
             while (!curState.XnaGameTime.HasValue || curState.XnaGameTime == oldState.XnaGameTime) {
                 Thread.Sleep(1);
                 goatMemory.ClearCaches();
@@ -143,16 +145,15 @@ namespace LiveSplit.EscapeGoat2.State
 
             // if we get this far, nothing went wrong!
             TimeSpan? endTime = goatMemory.GetXnaGameTime();
-            if (endTime != curState.XnaGameTime) {
-                // GOD DAMN IT SOMETHING WENT WRONG
-                LogWriter.WriteLine("Disregarding everything from this update, XNA time changed from {0} to {1} during it."
-                    + "  This is fine unless enough updates are skipped to miss events.", curState.XnaGameTime, endTime);
-                return;
-            }
+            if (endTime != curState.XnaGameTime)
+                return; // GOD DAMN IT SOMETHING WENT WRONG
 
             // Everything's fine, let's generate notifications
             if (!reset)
                 Broadcast();
+
+            if (oldState.XnaGameTime != TimeSpan.Zero && (curState.XnaGameTime - oldState.XnaGameTime)?.Ticks > 5 * frame.Ticks)
+                LogWriter.WriteLine("Missed {0} frames of updates", (double)(curState.XnaGameTime - oldState.XnaGameTime)?.Ticks / frame.Ticks);
 
             // This acts like a transaction commit, while the lack of it if we return or throw is a rollback
             oldState = curState;
@@ -168,10 +169,10 @@ namespace LiveSplit.EscapeGoat2.State
             if (oldState.roomTimeRunning && !curState.roomTimeRunning)
             {
                 // if we exited by a door, the room time wasn't updated this frame so add one frame
-                TimeSpan frame = goatMemory.GetTargetElapsedTime();
+                TimeSpan frame = TimeSpan.FromTicks(166667);
                 TimeSpan splittime = oldState.gameTime + curState.roomTime - oldState.roomTime + (curState.enteredDoor ? frame : TimeSpan.Zero);
                 if (Math.Abs((curState.gameTime - splittime).Ticks) >= TimeSpan.FromMilliseconds(1).Ticks)
-                    LogWriter.WriteLine("Split late by {0} frames", (double)((curState.gameTime - splittime).Ticks / frame.Ticks));
+                    LogWriter.WriteLine("Split late by {0} frames", (double)(curState.gameTime - splittime).Ticks / frame.Ticks);
 
                 OnTimerUpdated(this, new TimerEventArgs(splittime));
                 goatTriggers.SplitOnEndRoom(this.map.GetRoom(curState.roomID));
