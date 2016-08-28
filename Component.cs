@@ -272,6 +272,7 @@ namespace LiveSplit.EscapeGoat2
                 {
                     totalDeathCount++;
                     roomDeathDicts.Add(totalRoomDeaths);
+                    _state.Layout.HasChanged = true;
                 }
 
                 int roomKey = int.Parse(arg);
