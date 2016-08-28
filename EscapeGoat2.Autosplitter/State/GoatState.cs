@@ -132,13 +132,13 @@ namespace LiveSplit.EscapeGoat2.State
         public void Pulse() {
             curState = oldState;
 
-            TimeSpan frame = goatMemory.GetTargetElapsedTime();
-
             while (!curState.XnaGameTime.HasValue || curState.XnaGameTime == oldState.XnaGameTime) {
                 Thread.Sleep(1);
                 goatMemory.ClearCaches();
                 curState.XnaGameTime = goatMemory.GetXnaGameTime();
             }
+
+            TimeSpan frame = goatMemory.GetTargetElapsedTime();
 
             // Update internal model of the game's state
             Update();

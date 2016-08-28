@@ -213,6 +213,7 @@ namespace LiveSplit.EscapeGoat2.Memory
             // leaving ample time for the process to initialise before starting to read from it.
             if (!this.isMangled && this.isHooked && hookedTime.AddSeconds(GoatMemory.mangleDelay) < DateTime.Now) {
                 try {
+                    ClearCaches();
                     pm = new ProcessMangler(proc.Id);
                     this.isMangled = true;
                 } catch (Exception) {
